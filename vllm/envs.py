@@ -21,6 +21,9 @@ if TYPE_CHECKING:
     VLLM_RINGBUFFER_WARNING_INTERVAL: int = 60
     VLLM_NCCL_SO_PATH: str | None = None
     LD_LIBRARY_PATH: str | None = None
+    VLLM_DUMP_FX_GRAPH: bool = False
+    VLLM_DUMP_EAGER_TRACE: bool = False
+    VLLM_DUMP_DIR: str = ""
     VLLM_ROCM_SLEEP_MEM_CHUNK_SIZE: int = 256
     LOCAL_RANK: int = 0
     CUDA_VISIBLE_DEVICES: str | None = None
@@ -105,6 +108,9 @@ if TYPE_CHECKING:
     VLLM_USE_BYTECODE_HOOK: bool = True
     VLLM_FORCE_AOT_LOAD: bool = False
     VLLM_USE_MEGA_AOT_ARTIFACT: bool = False
+    VLLM_DUMP_FX_GRAPH: bool = False
+    VLLM_DUMP_EAGER_TRACE: bool = False
+    VLLM_DUMP_DIR: str = ""
     VLLM_USE_TRITON_AWQ: bool = False
     VLLM_ALLOW_RUNTIME_LORA_UPDATING: bool = False
     VLLM_SKIP_P2P_CHECK: bool = False
@@ -744,6 +750,15 @@ environment_variables: dict[str, Callable[[], Any]] = {
     # without re-splitting graph modules. This reduces overhead during model
     # loading by using reconstruct_serializable_fn_from_mega_artifact.
     "VLLM_USE_MEGA_AOT_ARTIFACT": use_mega_aot_artifact,
+    # Dump FX computation graph during compilation (Phase 1)
+    "VLLM_DUMP_FX_GRAPH":
+        lambda: bool(int(os.getenv("VLLM_DUMP_FX_GRAPH", "0"))),
+    # Dump eager kernel trace (Phase 2)
+    "VLLM_DUMP_EAGER_TRACE":
+        lambda: bool(int(os.getenv("VLLM_DUMP_EAGER_TRACE", "0"))),
+    # Optional output directory for dumps
+    "VLLM_DUMP_DIR":
+        lambda: os.getenv("VLLM_DUMP_DIR", ""),
     # local rank of the process in the distributed setting, used to determine
     # the GPU device id
     "LOCAL_RANK": lambda: int(os.environ.get("LOCAL_RANK", "0")),

@@ -5201,6 +5201,12 @@ class GPUModelRunner(
 
         get_offloader().post_init()
 
+        # Register eager trace hooks if env var is set (runs inside worker)
+        from vllm.envs import VLLM_DUMP_EAGER_TRACE
+        if VLLM_DUMP_EAGER_TRACE:
+            from vllm.profiler.worker_eager_tracer import register_tracer
+            register_tracer(self.model)
+
     def _setup_eagle3_aux_hidden_state_outputs(self) -> None:
         if not self.use_aux_hidden_state_outputs:
             return
@@ -5833,6 +5839,15 @@ class GPUModelRunner(
                 hidden_states, _ = outputs
             else:
                 hidden_states = outputs
+
+            # Dump eager trace after first forward pass (worker-side)
+            from vllm.envs import VLLM_DUMP_EAGER_TRACE, VLLM_DUMP_DIR
+            if VLLM_DUMP_EAGER_TRACE and not is_graph_capturing:
+                from vllm.profiler.worker_eager_tracer import dump_if_needed
+                dump_if_needed(
+                    output_dir=VLLM_DUMP_DIR or ".",
+                    filename="eager_trace_dump.json",
+                )
 
             if self.speculative_config and (
                 self.speculative_config.use_eagle()

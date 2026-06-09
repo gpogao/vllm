@@ -36,6 +36,7 @@ from vllm.platforms import current_platform
 from vllm.tracing import instrument, instrument_manual
 from vllm.utils.import_utils import resolve_obj_by_qualname
 from vllm.utils.torch_utils import is_torch_equal_or_newer
+from vllm.compilation.passes.dump_graph import DumpGraphPass
 
 from .compiler_interface import (
     CompilerInterface,
@@ -1178,10 +1179,16 @@ class VllmBackend:
 
         from torch._dynamo.utils import lazy_format_graph_code
 
+        # Dump computation graph (custom pass) — before split
+        DumpGraphPass.dump(self.graph, "before_split")
+
         # depyf will hook lazy_format_graph_code and dump the graph
         # for debugging, no need to print the graph here
         lazy_format_graph_code("before split", self.graph)
         lazy_format_graph_code("after split", self.split_gm)
+
+        # Dump computation graph after split (recurse into submodules)
+        DumpGraphPass.dump(self.split_gm, "after_split")
 
         # Log the piecewise split graph for TORCH_TRACE/tlparse
         trace_structured(
@@ -1214,6 +1221,9 @@ class VllmBackend:
         PiecewiseCompileInterpreter(
             self.split_gm, submod_names_to_compile, self.vllm_config, self
         ).run(*fake_args)
+
+        # Dump computation graph after lowering (recurse into submodules)
+        DumpGraphPass.dump(self.split_gm, "after_lowering")
 
         # All compilation is done. Save the cache.
         time_before_saving = time.perf_counter()
