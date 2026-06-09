@@ -45,8 +45,9 @@ class TestAlignOps:
         fx = [make_op("vllm_ir.rms_norm", [[1, 2560]])]
         eager = [make_op("aten::rms_norm", [[1, 2560]])]
         results = align_ops(fx, eager)
-        # Different names → compile_only + eager_only
-        assert len(results) == 2
+        # Semantic keyword matching should match "rms_norm" across both names
+        assert len(results) == 1
+        assert results[0].type == "match"
 
     def test_no_fx_ops_all_eager_only(self):
         fx = []
